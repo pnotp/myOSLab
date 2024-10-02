@@ -11,6 +11,24 @@
 // #include <sys/types.h>
 // #include <sys/wait.h>
 
+// 两个函数的定义我写在user/syscall.c中了，在这里附一下。
+// int dup(int fd){
+//   struct proc *p = myproc();
+//   p->trapframe->a7 = SYS_dup;
+//   p->trapframe->a0 = fd;
+//   syscall();
+//   return p->trapframe->a0;
+// }
+
+// int dup2(int oldfd, int newfd){
+//   struct proc *p = myproc();
+//   p->trapframe->a7 = SYS_dup2;
+//   p->trapframe->a0 = oldfd;
+//   p->trapframe->a1 = newfd;
+//   syscall();
+//   return p->trapframe->a0;
+// }
+
 int main(){
     int fd1 = -1, fd2 = -1;
 
@@ -44,25 +62,3 @@ int main(){
     return 0;
 }
 
-// int main()
-// {
-//     int fd = -1;
-//     if((fd = open("test.txt",O_RDWR|O_CREATE|O_TRUNC)) == -1) 
-//     //打开并清空外部文件
-//     {
-//         return -1;
-//     }
-//     int oldfd = dup(1); //保存标准输出对应的文件表项
-//     int tmp = dup2(fd,1);
-//     //重定向标准输出到外部文件test.txt中 
-//     printf("重定向标准输出测试！"); //重定向测试  
-//     int tmp2 = dup2(oldfd,1);
-//     if(tmp < 0 || tmp2 < 0){
-//         printf("error!");
-//     }
-//     //将重定向后的文件描述符1再次重定向到一开始保存的标准输出对应的文件表项中
-//     printf("重定向标准输出恢复测试！"); //重定向恢复测试
-//     close(fd);
-//     close(oldfd);
-//     return 0;
-// }
