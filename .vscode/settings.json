@@ -1,0 +1,21 @@
+{
+    "files.associations": {
+        "string.h": "c",
+        "types.h": "c",
+        "unistd.h": "c",
+        "user.h": "c",
+        "stat.h": "c",
+        "memlayout.h": "c",
+        "syscall.h": "c",
+        "*.tcc": "c",
+        "exception": "c",
+        "memory_resource": "c",
+        "fstream": "c",
+        "iosfwd": "c",
+        "new": "c",
+        "ostream": "c",
+        "sstream": "c",
+        "stop_token": "c",
+        "streambuf": "c"
+    }
+}

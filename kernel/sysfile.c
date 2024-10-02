@@ -25,7 +25,8 @@ argfd(int n, int *pfd, struct file **pf)
   struct file *f;
 
   argint(n, &fd);
-  if(fd < 0 || fd >= NOFILE || (f=myproc()->ofile[fd]) == 0)
+  // add 当且仅当pf有值，也即需要传一个文件指针出去时，才限定fd一定要指向有效的文件。
+  if(fd < 0 || fd >= NOFILE || (pf && ((f=myproc()->ofile[fd]) == 0)))
     return -1;
   if(pfd)
     *pfd = fd;
@@ -51,6 +52,23 @@ fdalloc(struct file *f)
   return -1;
 }
 
+// add
+// SUPPOSE OLDFD != NEWFD
+static int
+fdalloc2(struct file *f, int newfd)
+{
+  struct proc *p = myproc();
+
+  if(p->ofile[newfd] == 0){
+    p->ofile[newfd] = f;
+    return newfd;
+  }
+
+  fileclose(p->ofile[newfd]);
+  p->ofile[newfd] = f;
+  return newfd;
+}
+
 uint64
 sys_dup(void)
 {
@@ -63,6 +81,27 @@ sys_dup(void)
     return -1;
   filedup(f);
   return fd;
+}
+
+// add
+uint64
+sys_dup2(void)
+{
+  struct file *f;
+  int oldfd, newfd;
+
+  // 根据系统参数的第0个参数，认为其为fd，并把该fd对应的文件传回f中
+  if(argfd(0, &oldfd, &f) < 0 || argfd(1, &newfd, 0) < 0)
+    return -1;
+  
+  if(oldfd == newfd){
+    return newfd;
+  }  
+  
+  if((newfd=fdalloc2(f, newfd)) < 0)
+    return -1;
+  filedup(f);
+  return newfd;
 }
 
 uint64

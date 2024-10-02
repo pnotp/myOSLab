@@ -90,6 +90,7 @@ extern uint64 sys_exec(void);
 extern uint64 sys_fstat(void);
 extern uint64 sys_chdir(void);
 extern uint64 sys_dup(void);
+extern uint64 sys_dup2(void);
 extern uint64 sys_getpid(void);
 extern uint64 sys_sbrk(void);
 extern uint64 sys_sleep(void);
@@ -115,6 +116,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_fstat]   sys_fstat,
 [SYS_chdir]   sys_chdir,
 [SYS_dup]     sys_dup,
+[SYS_dup2]     sys_dup2,
 [SYS_getpid]  sys_getpid,
 [SYS_sbrk]    sys_sbrk,
 [SYS_sleep]   sys_sleep,
@@ -144,4 +146,21 @@ syscall(void)
             p->pid, p->name, num);
     p->trapframe->a0 = -1;
   }
+}
+
+int dup(int fd){
+  struct proc *p = myproc();
+  p->trapframe->a7 = SYS_dup;
+  p->trapframe->a0 = fd;
+  syscall();
+  return p->trapframe->a0;
+}
+
+int dup2(int oldfd, int newfd){
+  struct proc *p = myproc();
+  p->trapframe->a7 = SYS_dup2;
+  p->trapframe->a0 = oldfd;
+  p->trapframe->a1 = newfd;
+  syscall();
+  return p->trapframe->a0;
 }

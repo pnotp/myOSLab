@@ -188,9 +188,10 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
-
-
-
+	$U/_lab1_pipe\
+	$U/_lab1_dup\
+	$U/_lab1_dup2\
+	
 
 ifeq ($(LAB),$(filter $(LAB), lock))
 UPROGS += \

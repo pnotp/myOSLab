@@ -32,6 +32,7 @@ entry("link");
 entry("mkdir");
 entry("chdir");
 entry("dup");
+entry("dup2");
 entry("getpid");
 entry("sbrk");
 entry("sleep");
