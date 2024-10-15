@@ -17,6 +17,7 @@ struct entry *table[NBUCKET];
 int keys[NKEYS];
 int nthread = 1;
 
+pthread_mutex_t lock; // declare a lock 
 
 double
 now()
@@ -78,7 +79,9 @@ put_thread(void *xa)
   int b = NKEYS/nthread;
 
   for (int i = 0; i < b; i++) {
+    pthread_mutex_lock(&lock); // acquire lock 
     put(keys[b*n + i], n);
+    pthread_mutex_unlock(&lock); // release lock 
   }
 
   return NULL;
@@ -105,6 +108,7 @@ main(int argc, char *argv[])
   void *value;
   double t1, t0;
 
+  pthread_mutex_init(&lock, NULL); // initialize the lock
 
   if (argc < 2) {
     fprintf(stderr, "Usage: %s nthreads\n", argv[0]);
