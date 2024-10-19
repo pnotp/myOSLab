@@ -8,13 +8,15 @@ main(int argc, char *argv[])
         int data[8];
         int i,j,k;
         pid=fork();
+        printf("pid: %d started \n", pid);
         for(i=0;i<2;i++)
         {
-            for(j=0;j<1024;j++)
+            printf("pid: %d running \n", pid);
+            for(j=0;j<1024*2;j++)
                 for(k=0;k<1024*256;k++)
                     data[k%8]=pid*k;
          }
-         printf("%d ",data[0]);
+         printf("pid: %d done, %d \n", pid, data[0]);
          exit(0);
 }
 
