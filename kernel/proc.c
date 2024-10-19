@@ -505,7 +505,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  printf("%d \n", p->pid);
+  // printf("%d \n", p->pid);
   sched();
   release(&p->lock);
 }
