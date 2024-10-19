@@ -91,3 +91,15 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_chpri(void)
+{
+  int pid, priority;
+  argint(0, &pid);
+  argint(1, &priority);
+  if(pid < 0 || priority < 0)
+    return -1;
+
+  return chpri(pid, priority);
+}

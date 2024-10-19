@@ -189,7 +189,7 @@ UPROGS=\
 	$U/_wc\
 	$U/_zombie\
 	$U/_loop\
-
+	$U/_prio_sched\
 
 
 ifeq ($(LAB),$(filter $(LAB), lock))

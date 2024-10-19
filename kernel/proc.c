@@ -124,6 +124,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->priority = 19;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -448,18 +449,32 @@ scheduler(void)
   struct cpu *c = mycpu();
   
   c->proc = 0;
+  int min_priority;
+
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
+    min_priority = 20;
+
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
+        if(p->priority < min_priority){
+          min_priority = p->priority;
+        }
+      }
+      release(&p->lock);
+    }
+
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if( p->state == RUNNABLE && p->priority == min_priority) {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
-        int pid = p->pid;
-        printf("sch run: %d \n", pid);
+        // int pid = p->pid;
+        // printf("sch run: %d \n", pid);
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
@@ -467,7 +482,7 @@ scheduler(void)
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
-        printf("sch back: %d \n", pid);
+        // printf("sch back: %d \n", pid);
       }
       release(&p->lock);
     }
@@ -684,4 +699,22 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+int
+chpri(int pid, int priority){
+  struct proc *p;
+  // Avoid deadlock by ensuring that devices can interrupt.
+  intr_on();
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->pid == pid) {
+      p->priority = priority;
+      release(&p->lock);
+      break;
+    }
+    release(&p->lock);
+  }
+  return pid;
 }
