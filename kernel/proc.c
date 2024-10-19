@@ -458,6 +458,8 @@ scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
+        int pid = p->pid;
+        printf("sch run: %d \n", pid);
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
@@ -465,6 +467,7 @@ scheduler(void)
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
+        printf("sch back: %d \n", pid);
       }
       release(&p->lock);
     }
