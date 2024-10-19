@@ -8,6 +8,7 @@ main(int argc, char *argv[])
         int data[8];
         int i,j,k;
         pid=fork();
+        pid=getpid();
         printf("pid: %d started \n", pid);
         for(i=0;i<2;i++)
         {
