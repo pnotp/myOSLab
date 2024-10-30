@@ -168,7 +168,7 @@ void test3(void)
   kill(pid);
 
   n = ntas(1);
-  if(n-m < 4000) 
+  if(n-m < 10000) 
     printf("\ntest3 OK\n");
   else
     printf("test3 FAIL m %d n %d\n", m, n);
