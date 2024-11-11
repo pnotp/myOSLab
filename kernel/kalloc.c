@@ -21,12 +21,19 @@ struct run {
 struct {
   struct spinlock lock;
   struct run *freelist;
-} kmem;
+} kmems[NCPU];
 
 void
 kinit()
 {
-  initlock(&kmem.lock, "kmem");
+  for (int i = 0; i < NCPU; i++)
+  {
+    char buf[10];
+    snprintf(buf, 10, "kmem-%d", i);
+    initlock(&kmems[i].lock, buf);
+    kmems[i].freelist = 0;
+  }
+  
   freerange(end, (void*)PHYSTOP);
 }
 
@@ -51,15 +58,19 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
+  push_off(); // close interrupt
+  int cid = cpuid();
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
   r = (struct run*)pa;
 
-  acquire(&kmem.lock);
-  r->next = kmem.freelist;
-  kmem.freelist = r;
-  release(&kmem.lock);
+  acquire(&kmems[cid].lock);
+  r->next = kmems[cid].freelist;
+  kmems[cid].freelist = r;
+  release(&kmems[cid].lock);
+
+  pop_off(); // open interrupt
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -69,13 +80,34 @@ void *
 kalloc(void)
 {
   struct run *r;
-
-  acquire(&kmem.lock);
-  r = kmem.freelist;
+  
+  int cid;
+  push_off();
+  cid = cpuid();
+  acquire(&kmems[cid].lock);
+  r = kmems[cid].freelist;
   if(r)
-    kmem.freelist = r->next;
-  release(&kmem.lock);
+    kmems[cid].freelist = r->next;
+  release(&kmems[cid].lock);
 
+  if(!r){
+    for(int i = 1; i < NCPU; i++){
+      int next_cid = (cid + i) % NCPU;
+
+      acquire(&kmems[next_cid].lock);
+      if(kmems[next_cid].freelist){
+        r = kmems[next_cid].freelist;
+        kmems[next_cid].freelist = r->next;
+        release(&kmems[next_cid].lock);
+        break;
+      }
+      else{
+        release(&kmems[next_cid].lock);
+      }
+    }
+  }
+
+  pop_off();
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
