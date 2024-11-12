@@ -34,6 +34,7 @@ struct {
   // Sorted by how recently the buffer was used.
   // head.next is most recent, head.prev is least.
   struct buf heads[NUM_BUCKET];
+  char lockname[NUM_BUCKET][20];
 } bcache;
 
 void
@@ -42,9 +43,9 @@ binit(void)
   struct buf *b;
 
   for(int i = 0; i < NUM_BUCKET; i++){
-    char buf[10];
-    snprintf(buf, 10, "bcache-%d", i);
-    initlock(&bcache.locks[i], buf);
+    // char buf[10];
+    snprintf(bcache.lockname[i], 10, "bcache-%d", i);
+    initlock(&bcache.locks[i], bcache.lockname[i]);
 
     // Create linked list of buffers
     bcache.heads[i].prev = bcache.heads + i;
