@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -153,8 +155,8 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   for(;;){
     if((pte = walk(pagetable, a, 1)) == 0)
       return -1;
-    if(*pte & PTE_V)
-      panic("mappages: remap");
+    // if(*pte & PTE_V)
+    //   panic("mappages: remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
     if(a == last)
       break;
@@ -308,20 +310,29 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  char *mem;
+  // char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
+
+    if(*pte & PTE_W){
+      *pte = (*pte & (~PTE_W)) | PTE_COW;
+    }
     pa = PTE2PA(*pte);
+    kaddref((void*)pa);
+
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
+    // if((mem = kalloc()) == 0)
+    //   goto err;
+    // memmove(mem, (char*)pa, PGSIZE);
+    // if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
+    //   kfree(mem);
+    //   goto err;
+    // }
+    if(mappages(new, i, PGSIZE, (uint64)pa, flags) != 0){
       goto err;
     }
   }
@@ -352,12 +363,42 @@ int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
   uint64 n, va0, pa0;
+  pte_t *pte;
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
     if(pa0 == 0)
       return -1;
+    
+    struct proc *p = myproc();
+    if(va0 >= MAXVA)
+      return -1;
+    if(va0 < PGSIZE)
+        return -1;
+    if((pte = walk(pagetable, va0, 0))==0){
+      setkilled(p);
+      return -1;
+    }
+    if((va0 < p->sz) && (*pte & PTE_V) && (*pte & PTE_COW) && (*pte & PTE_U)){
+      char refcnt = kgetref((void*)pa0);
+      if(refcnt==1){
+        *pte = (*pte & (~PTE_COW)) | PTE_W;
+      }else if (refcnt > 1){
+        char *mem;
+        ksubref((void *)pa0);
+        if((mem = kalloc()) == 0){
+          setkilled(p);
+          return -1;
+        }
+        memmove(mem, (char *)pa0, PGSIZE);
+        uint flags = PTE_FLAGS(*pte);
+        *pte = (PA2PTE(mem) | flags | PTE_W);
+        *pte &= ~PTE_COW;
+        pa0 = (uint64)mem;
+      }
+    }
+    
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;

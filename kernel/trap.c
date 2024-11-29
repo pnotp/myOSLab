@@ -16,6 +16,39 @@ void kernelvec();
 
 extern int devintr();
 
+int
+cowhandler(pagetable_t pagetable, uint64 va) 
+{
+  uint flags;
+  char* mem;
+
+  if(va >= MAXVA)
+     return -1; 
+  pte_t *pte = walk(pagetable, va, 0); 
+  if(pte == 0)
+      return -1; 
+  if((*pte & PTE_COW) == 0 || (*pte & PTE_U) == 0 || (*pte & PTE_V) == 0)
+      return -1; 
+  uint64 pa = PTE2PA(*pte);
+  char refcnt = kgetref((void *)pa);
+  if(refcnt == 1){ 
+      *pte =(*pte & (~PTE_COW)) | PTE_W;
+      return 0;
+  }
+  if(refcnt > 1){ 
+    if((mem = kalloc()) == 0){
+      return -1;
+    }
+    memmove((char *)mem, (char *)pa, PGSIZE);
+    kfree((void *)pa);
+    flags = PTE_FLAGS(*pte);
+    *pte = (PA2PTE(mem) | flags | PTE_W);
+    *pte &= ~PTE_COW;
+    return 0;
+  }
+  return -1;
+}
+
 void
 trapinit(void)
 {
@@ -65,6 +98,15 @@ usertrap(void)
     intr_on();
 
     syscall();
+  } else if(r_scause() == 15){
+    uint64 va = r_stval();
+    if(va > p->sz)
+      setkilled(p);
+    else if(va < PGSIZE)
+      setkilled(p); 
+    else if(cowhandler(p->pagetable, va) != 0)
+      setkilled(p);
+    
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {

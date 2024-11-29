@@ -18,31 +18,32 @@ simpletest()
   printf("simple: ");
   
   char *p = sbrk(sz);
+  // printf("1\n");
   if(p == (char*)0xffffffffffffffffL){
     printf("sbrk(%d) failed\n", sz);
     exit(-1);
   }
-
+  // printf("2\n");
   for(char *q = p; q < p + sz; q += 4096){
     *(int*)q = getpid();
   }
-
+  // printf("3\n");
   int pid = fork();
   if(pid < 0){
     printf("fork() failed\n");
     exit(-1);
   }
-
+  // printf("4\n");
   if(pid == 0)
     exit(0);
-
+  // printf("5\n");
   wait(0);
-
+  // printf("6\n");
   if(sbrk(-sz) == (char*)0xffffffffffffffffL){
     printf("sbrk(-%d) failed\n", sz);
     exit(-1);
   }
-
+  // printf("7\n");
   printf("ok\n");
 }
 
